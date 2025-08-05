@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Aerial Image Enhancer</title>
+    <!-- Tailwind CSS for modern and responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e; /* Dark background */
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            min-height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #2e2e4a; /* Darker panel background */
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .canvas-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 10px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 0.75rem;
+            border: 2px solid #5a5a7c;
+        }
+        .shared-image-item {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background-color: #3e3e60;
+        }
+        .shared-image-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-[#1a1a2e] text-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-[#2e2e4a] rounded-3xl shadow-2xl p-8 w-full max-w-7xl flex flex-col items-center">
+        <h1 class="text-4xl font-bold text-gray-100 mb-2">🚀 Pro Aerial Image Enhancer</h1>
+        <p class="text-gray-400 text-center mb-4">Upload, enhance, and share high-quality images with the community.</p>
+        <p id="userIdDisplay" class="text-xs text-gray-500 mb-6"></p>
+
+        <!-- Image Upload and Display Area -->
+        <div class="mb-8 w-full flex flex-col items-center">
+            <label for="imageInput" class="mb-6 cursor-pointer bg-gradient-to-r from-purple-600 to-sky-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:from-purple-700 hover:to-sky-600 transition-all duration-300 transform hover:scale-105">
+                Upload Image
+            </label>
+            <input type="file" id="imageInput" accept="image/*" class="hidden"/>
+            
+            <div class="flex flex-col md:flex-row gap-8 w-full justify-center">
+                <!-- Original Image Panel -->
+                <div class="canvas-wrapper">
+                    <h2 class="text-lg font-semibold text-gray-200 mb-4">Original Image</h2>
+                    <div class="canvas-container shadow-md">
+                        <canvas id="originalCanvas" class="w-full h-auto"></canvas>
+                        <p id="placeholder-original" class="text-gray-500 text-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">Original image</p>
+                    </div>
+                </div>
+
+                <!-- Enhanced Image Panel -->
+                <div class="canvas-wrapper">
+                    <h2 class="text-lg font-semibold text-gray-200 mb-4">Enhanced Image</h2>
+                    <div class="canvas-container shadow-md">
+                        <canvas id="enhancedCanvas" class="w-full h-auto"></canvas>
+                        <p id="placeholder-enhanced" class="text-gray-500 text-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">Enhanced image</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls for Filters -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full max-w-5xl">
+            <button id="claheFilterBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                CLAHE
+            </button>
+            <button id="enhancedSharpeningBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                Enhanced Sharpen
+            </button>
+            <button id="medianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                Median Filter
+            </button>
+            <button id="adaptiveMedianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                Adaptive Median
+            </button>
+            <button id="unsharpMaskingBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                Unsharp Masking
+            </button>
+        </div>
+
+        <!-- Utility Buttons -->
+        <div class="mt-8 flex flex-col md:flex-row gap-4 w-full justify-center">
+            <button id="resetBtn" class="bg-gray-700 text-gray-200 font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-300">
+                Reset
+            </button>
+            <button id="saveOriginalBtn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-purple-700 transition duration-300">
+                Save Original
+            </button>
+            <button id="saveEnhancedBtn" class="bg-green-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-green-600 transition duration-300">
+                Save Enhanced
+            </button>
+            <button id="shareEnhancedBtn" class="bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-600 transition duration-300">
+                Share Enhanced Image
+            </button>
+        </div>
+        
+        <!-- Status Message Area -->
+        <p id="statusMessage" class="text-gray-400 mt-6 h-6 text-center"></p>
+
+        <!-- Shared Images Gallery -->
+        <div class="mt-12 w-full">
+            <h2 class="text-2xl font-bold text-gray-100 mb-6 text-center">Community Gallery</h2>
+            <div id="sharedImagesContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Shared images will be loaded here -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let userId = null;
+
+        // --- Firebase Auth and Firestore Setup ---
+        async function signIn() {
+            try {
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Firebase Auth error:", error);
+            }
+        }
+        
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
+                console.log("Signed in as user:", userId);
+                setupFirestoreListeners();
+            } else {
+                console.log("User is signed out.");
+                await signIn();
+            }
+        });
+
+        // --- DOM Elements and State ---
+        const imageInput = document.getElementById('imageInput');
+        const originalCanvas = document.getElementById('originalCanvas');
+        const enhancedCanvas = document.getElementById('enhancedCanvas');
+        const ctxOriginal = originalCanvas.getContext('2d');
+        const ctxEnhanced = enhancedCanvas.getContext('2d');
+        const placeholderOriginal = document.getElementById('placeholder-original');
+        const placeholderEnhanced = document.getElementById('placeholder-enhanced');
+        const medianFilterBtn = document.getElementById('medianFilterBtn');
+        const adaptiveMedianFilterBtn = document.getElementById('adaptiveMedianFilterBtn');
+        const unsharpMaskingBtn = document.getElementById('unsharpMaskingBtn');
+        const claheFilterBtn = document.getElementById('claheFilterBtn');
+        const enhancedSharpeningBtn = document.getElementById('enhancedSharpeningBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveOriginalBtn = document.getElementById('saveOriginalBtn');
+        const saveEnhancedBtn = document.getElementById('saveEnhancedBtn');
+        const shareEnhancedBtn = document.getElementById('shareEnhancedBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const sharedImagesContainer = document.getElementById('sharedImagesContainer');
+
+        let originalImage = null;
+        let enhancedImageId = null;
+
+        // --- Event Listeners ---
+        imageInput.addEventListener('change', handleImageUpload);
+        medianFilterBtn.addEventListener('click', () => applyFilter(applyMedianFilter));
+        adaptiveMedianFilterBtn.addEventListener('click', () => applyFilter(applyAdaptiveMedianFilter));
+        unsharpMaskingBtn.addEventListener('click', () => applyFilter(applyUnsharpMasking));
+        claheFilterBtn.addEventListener('click', () => applyFilter(applyClaheFilter));
+        enhancedSharpeningBtn.addEventListener('click', () => applyFilter(applyEnhancedSharpening));
+        resetBtn.addEventListener('click', resetImage);
+        saveOriginalBtn.addEventListener('click', () => saveImage(originalCanvas, 'original_image'));
+        saveEnhancedBtn.addEventListener('click', () => saveImage(enhancedCanvas, 'enhanced_image'));
+        shareEnhancedBtn.addEventListener('click', shareEnhancedImage);
+
+        /**
+         * Generic filter application wrapper.
+         * @param {Function} filterFunction - The image processing function to call.
+         */
+        function applyFilter(filterFunction) {
+            if (!originalImage) {
+                statusMessage.textContent = 'Please upload or select an image first.';
+                return;
+            }
+            statusMessage.textContent = `Applying ${filterFunction.name.replace('apply', '')}...`;
+            setTimeout(() => {
+                filterFunction();
+                statusMessage.textContent = `Filter applied: ${filterFunction.name.replace('apply', '')}!`;
+            }, 10);
+        }
+
+        // --- Firestore Functions ---
+        function setupFirestoreListeners() {
+            const publicImagesRef = collection(db, `/artifacts/${appId}/public/data/public_images`);
+            onSnapshot(publicImagesRef, (snapshot) => {
+                sharedImagesContainer.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const imageData = doc.data();
+                    createSharedImageElement(doc.id, imageData.base64);
+                });
+            }, (error) => {
+                console.error("Error fetching shared images:", error);
+            });
+        }
+
+        function createSharedImageElement(id, base64Data) {
+            const img = new Image();
+            img.src = base64Data;
+            img.classList.add('w-full', 'h-auto', 'rounded-lg', 'shadow-md', 'shared-image-item');
+            img.addEventListener('click', () => {
+                loadSharedImage(base64Data);
+                enhancedImageId = id;
+            });
+            sharedImagesContainer.appendChild(img);
+        }
+
+        function loadSharedImage(base64Data) {
+            const img = new Image();
+            img.onload = () => {
+                originalImage = img;
+                drawImages();
+                statusMessage.textContent = 'Shared image loaded!';
+                placeholderOriginal.style.display = 'none';
+                placeholderEnhanced.style.display = 'none';
+            };
+            img.src = base64Data;
+        }
+
+        async function shareEnhancedImage() {
+            if (!originalImage) {
+                statusMessage.textContent = 'Please upload or select an image to share.';
+                return;
+            }
+
+            statusMessage.textContent = 'Sharing image...';
+            const base64Data = enhancedCanvas.toDataURL('image/jpeg', 0.8);
+            const imageDoc = {
+                base64: base64Data,
+                sharedBy: userId,
+                timestamp: new Date()
+            };
+
+            const publicImagesRef = collection(db, `/artifacts/${appId}/public/data/public_images`);
+            try {
+                if (enhancedImageId) {
+                     await updateDoc(doc(db, `/artifacts/${appId}/public/data/public_images`, enhancedImageId), imageDoc);
+                    statusMessage.textContent = 'Shared image updated successfully!';
+                } else {
+                    await addDoc(publicImagesRef, imageDoc);
+                    statusMessage.textContent = 'Enhanced image shared successfully!';
+                }
+            } catch (e) {
+                console.error("Error sharing image:", e);
+                statusMessage.textContent = 'Error sharing image. Check the console for details.';
+            }
+        }
+
+        // --- Image Handling and Drawing ---
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    originalImage = img;
+                    drawImages();
+                    statusMessage.textContent = 'Image loaded successfully!';
+                    placeholderOriginal.style.display = 'none';
+                    placeholderEnhanced.style.display = 'none';
+                    enhancedImageId = null; 
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function drawImages() {
+            if (!originalImage) return;
+
+            originalCanvas.width = originalImage.width;
+            originalCanvas.height = originalImage.height;
+            enhancedCanvas.width = originalImage.width;
+            enhancedCanvas.height = originalImage.height;
+
+            ctxOriginal.drawImage(originalImage, 0, 0);
+            ctxEnhanced.drawImage(originalImage, 0, 0);
+        }
+
+        function resetImage() {
+            if (originalImage) {
+                ctxEnhanced.drawImage(originalImage, 0, 0);
+                statusMessage.textContent = 'Enhanced image reset to original.';
+            } else {
+                statusMessage.textContent = 'Please upload an image first.';
+            }
+        }
+
+        function saveImage(canvas, filename) {
+            const link = document.createElement('a');
+            link.download = `${filename}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            statusMessage.textContent = `Image saved as ${link.download}.`;
+        }
+
+        // --- Image Processing Filters (Updated) ---
+
+        /**
+         * Applies the new CLAHE filter for local contrast enhancement.
+         * @param {number} clipLimit - The clip limit for the histogram.
+         * @param {number} tileSize - The size of the tile for local processing.
+         */
+        function applyClaheFilter(clipLimit = 2, tileSize = 8) {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(srcData);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            // Process each channel separately
+            for (let channel = 0; channel < 3; channel++) {
+                // CLAHE involves dividing the image into tiles
+                const tileWidth = Math.floor(width / tileSize);
+                const tileHeight = Math.floor(height / tileSize);
+                const tileHistograms = new Array(tileSize * tileSize).fill(0).map(() => new Array(256).fill(0));
+
+                // Step 1: Compute histograms for each tile
+                for (let ty = 0; ty < tileSize; ty++) {
+                    for (let tx = 0; tx < tileSize; tx++) {
+                        const tileIndex = ty * tileSize + tx;
+                        for (let y = ty * tileHeight; y < (ty + 1) * tileHeight; y++) {
+                            for (let x = tx * tileWidth; x < (tx + 1) * tileWidth; x++) {
+                                if (x < width && y < height) {
+                                    const index = (y * width + x) * 4 + channel;
+                                    tileHistograms[tileIndex][srcPixels[index]]++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Step 2: Clip and redistribute histograms
+                const newCdfs = tileHistograms.map(histogram => {
+                    // Clip the histogram
+                    let excess = 0;
+                    for (let i = 0; i < 256; i++) {
+                        if (histogram[i] > clipLimit) {
+                            excess += histogram[i] - clipLimit;
+                            histogram[i] = clipLimit;
+                        }
+                    }
+                    const redistributionAmount = Math.floor(excess / 256);
+                    for (let i = 0; i < 256; i++) {
+                        histogram[i] += redistributionAmount;
+                    }
+
+                    // Compute CDF (Cumulative Distribution Function)
+                    const cdf = new Array(256).fill(0);
+                    let sum = 0;
+                    for (let i = 0; i < 256; i++) {
+                        sum += histogram[i];
+                        cdf[i] = sum;
+                    }
+                    const minCdf = cdf[0];
+                    return cdf.map(val => Math.floor(255 * (val - minCdf) / (sum - minCdf)));
+                });
+
+                // Step 3: Interpolate and apply new pixel values
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const index = (y * width + x) * 4 + channel;
+
+                        // Bilinear interpolation for smooth transitions between tiles
+                        const tx = x / tileWidth - 0.5;
+                        const ty = y / tileHeight - 0.5;
+                        const tx1 = Math.floor(tx);
+                        const ty1 = Math.floor(ty);
+                        const dx = tx - tx1;
+                        const dy = ty - ty1;
+
+                        const val = srcPixels[index];
+
+                        const cdfA = (tx1 >= 0 && ty1 >= 0) ? newCdfs[ty1 * tileSize + tx1][val] : 0;
+                        const cdfB = (tx1 + 1 < tileSize && ty1 >= 0) ? newCdfs[ty1 * tileSize + tx1 + 1][val] : 0;
+                        const cdfC = (tx1 >= 0 && ty1 + 1 < tileSize) ? newCdfs[(ty1 + 1) * tileSize + tx1][val] : 0;
+                        const cdfD = (tx1 + 1 < tileSize && ty1 + 1 < tileSize) ? newCdfs[(ty1 + 1) * tileSize + tx1 + 1][val] : 0;
+
+                        const interpolatedValue = (1 - dx) * ((1 - dy) * cdfA + dy * cdfC) + dx * ((1 - dy) * cdfB + dy * cdfD);
+                        dstPixels[index] = Math.round(interpolatedValue);
+                    }
+                }
+            }
+
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
+
+        /**
+         * Applies an enhanced sharpening filter using a more aggressive kernel.
+         */
+        function applyEnhancedSharpening() {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const kernel = [
+                -1, -1, -1,
+                -1, 9, -1,
+                -1, -1, -1
+            ];
+            const kernelSize = 3;
+            const halfKernel = Math.floor(kernelSize / 2);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let r = 0, g = 0, b = 0;
+                    
+                    for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                        for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                            const neighborX = x + kx;
+                            const neighborY = y + ky;
+                            const kernelValue = kernel[(ky + halfKernel) * kernelSize + (kx + halfKernel)];
+
+                            if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height) {
+                                const index = (neighborY * width + neighborX) * 4;
+                                r += srcPixels[index] * kernelValue;
+                                g += srcPixels[index + 1] * kernelValue;
+                                b += srcPixels[index + 2] * kernelValue;
+                            }
+                        }
+                    }
+                    const destIndex = (y * width + x) * 4;
+                    dstPixels[destIndex] = Math.max(0, Math.min(255, r));
+                    dstPixels[destIndex + 1] = Math.max(0, Math.min(255, g));
+                    dstPixels[destIndex + 2] = Math.max(0, Math.min(255, b));
+                    dstPixels[destIndex + 3] = srcPixels[destIndex + 3];
+                }
+            }
+
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
+
+        /**
+         * Applies a Median Filter to the enhanced image on the canvas.
+         */
+        function applyMedianFilter() {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const kernelSize = 3;
+            const halfKernel = Math.floor(kernelSize / 2);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const pixelsR = [];
+                    const pixelsG = [];
+                    const pixelsB = [];
+
+                    for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                        for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                            const neighborX = x + kx;
+                            const neighborY = y + ky;
+
+                            if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height) {
+                                const index = (neighborY * width + neighborX) * 4;
+                                pixelsR.push(srcPixels[index]);
+                                pixelsG.push(srcPixels[index + 1]);
+                                pixelsB.push(srcPixels[index + 2]);
+                            }
+                        }
+                    }
+
+                    pixelsR.sort((a, b) => a - b);
+                    pixelsG.sort((a, b) => a - b);
+                    pixelsB.sort((a, b) => a - b);
+
+                    const medianIndex = Math.floor(pixelsR.length / 2);
+                    const destIndex = (y * width + x) * 4;
+
+                    dstPixels[destIndex] = pixelsR[medianIndex];
+                    dstPixels[destIndex + 1] = pixelsG[medianIndex];
+                    dstPixels[destIndex + 2] = pixelsB[medianIndex];
+                    dstPixels[destIndex + 3] = srcPixels[destIndex + 3];
+                }
+            }
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
+
+        /**
+         * Applies an Adaptive Median Filter to the enhanced image.
+         */
+        function applyAdaptiveMedianFilter() {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const minKernelSize = 3;
+            const maxKernelSize = 7;
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const destIndex = (y * width + x) * 4;
+                    let currentKernelSize = minKernelSize;
+                    let processed = false;
+
+                    while (currentKernelSize <= maxKernelSize && !processed) {
+                        const halfKernel = Math.floor(currentKernelSize / 2);
+                        const pixelsR = [];
+                        const pixelsG = [];
+                        const pixelsB = [];
+
+                        for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                            for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                                const neighborX = x + kx;
+                                const neighborY = y + ky;
+
+                                if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height) {
+                                    const index = (neighborY * width + neighborX) * 4;
+                                    pixelsR.push(srcPixels[index]);
+                                    pixelsG.push(srcPixels[index + 1]);
+                                    pixelsB.push(srcPixels[index + 2]);
+                                }
+                            }
+                        }
+
+                        pixelsR.sort((a, b) => a - b);
+                        pixelsG.sort((a, b) => a - b);
+                        pixelsB.sort((a, b) => a - b);
+                        const medianIndex = Math.floor(pixelsR.length / 2);
+
+                        const minR = pixelsR[0], maxR = pixelsR[pixelsR.length - 1], medianR = pixelsR[medianIndex];
+                        const minG = pixelsG[0], maxG = pixelsG[pixelsG.length - 1], medianG = pixelsG[medianIndex];
+                        const minB = pixelsB[0], maxB = pixelsB[pixelsB.length - 1], medianB = pixelsB[medianIndex];
+                        
+                        const pixelR = srcPixels[destIndex];
+                        const pixelG = srcPixels[destIndex + 1];
+                        const pixelB = srcPixels[destIndex + 2];
+
+                        if (medianR > minR && medianR < maxR && medianG > minG && medianG < maxG && medianB > minB && medianB < maxB) {
+                            if (pixelR > minR && pixelR < maxR && pixelG > minG && pixelG < maxG && pixelB > minB && pixelB < maxB) {
+                                dstPixels[destIndex] = pixelR;
+                                dstPixels[destIndex + 1] = pixelG;
+                                dstPixels[destIndex + 2] = pixelB;
+                            } else {
+                                dstPixels[destIndex] = medianR;
+                                dstPixels[destIndex + 1] = medianG;
+                                dstPixels[destIndex + 2] = medianB;
+                            }
+                            processed = true;
+                        } else {
+                            currentKernelSize += 2;
+                        }
+                    }
+
+                    if (!processed) {
+                        const pixelsR = [];
+                        const pixelsG = [];
+                        const pixelsB = [];
+                        const halfKernel = Math.floor(maxKernelSize / 2);
+
+                        for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                            for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                                const neighborX = x + kx;
+                                const neighborY = y + ky;
+                                if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height) {
+                                    const index = (neighborY * width + neighborX) * 4;
+                                    pixelsR.push(srcPixels[index]);
+                                    pixelsG.push(srcPixels[index + 1]);
+                                    pixelsB.push(srcPixels[index + 2]);
+                                }
+                            }
+                        }
+                        pixelsR.sort((a, b) => a - b);
+                        pixelsG.sort((a, b) => a - b);
+                        pixelsB.sort((a, b) => a - b);
+                        const medianIndex = Math.floor(pixelsR.length / 2);
+
+                        dstPixels[destIndex] = pixelsR[medianIndex];
+                        dstPixels[destIndex + 1] = pixelsG[medianIndex];
+                        dstPixels[destIndex + 2] = pixelsB[medianIndex];
+                    }
+
+                    dstPixels[destIndex + 3] = srcPixels[destIndex + 3];
+                }
+            }
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
+
+        /**
+         * Applies the Unsharp Masking technique.
+         */
+        function applyUnsharpMasking() {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const blurredData = applyGaussianBlur(srcData);
+            const blurredPixels = blurredData.data;
+
+            const amount = 1.5; 
+
+            for (let i = 0; i < srcPixels.length; i += 4) {
+                const rDetail = srcPixels[i] - blurredPixels[i];
+                const gDetail = srcPixels[i + 1] - blurredPixels[i + 1];
+                const bDetail = srcPixels[i + 2] - blurredPixels[i + 2];
+                
+                const r = srcPixels[i] + rDetail * amount;
+                const g = srcPixels[i + 1] + gDetail * amount;
+                const b = srcPixels[i + 2] + bDetail * amount;
+
+                dstPixels[i] = Math.max(0, Math.min(255, r));
+                dstPixels[i + 1] = Math.max(0, Math.min(255, g));
+                dstPixels[i + 2] = Math.max(0, Math.min(255, b));
+                dstPixels[i + 3] = srcPixels[i + 3];
+            }
+
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
+        
+        /**
+         * Helper function for Unsharp Masking: Applies a Gaussian Blur filter.
+         */
+        function applyGaussianBlur(imageData) {
+            const srcData = imageData;
+            const dstData = ctxEnhanced.createImageData(srcData);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const kernelSize = 5;
+            const halfKernel = Math.floor(kernelSize / 2);
+            const sigma = 1.0;
+            const kernel = createGaussianKernel(kernelSize, sigma);
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    let r = 0, g = 0, b = 0;
+                    
+                    for (let ky = -halfKernel; ky <= halfKernel; ky++) {
+                        for (let kx = -halfKernel; kx <= halfKernel; kx++) {
+                            const neighborX = x + kx;
+                            const neighborY = y + ky;
+                            const kernelValue = kernel[(ky + halfKernel) * kernelSize + (kx + halfKernel)];
+
+                            if (neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height) {
+                                const index = (neighborY * width + neighborX) * 4;
+                                r += srcPixels[index] * kernelValue;
+                                g += srcPixels[index + 1] * kernelValue;
+                                b += srcPixels[index + 2] * kernelValue;
+                            }
+                        }
+                    }
+
+                    const destIndex = (y * width + x) * 4;
+                    dstPixels[destIndex] = r;
+                    dstPixels[destIndex + 1] = g;
+                    dstPixels[destIndex + 2] = b;
+                    dstPixels[destIndex + 3] = srcPixels[destIndex + 3];
+                }
+            }
+            return dstData;
+        }
+
+        /**
+         * Helper function to create a Gaussian kernel.
+         */
+        function createGaussianKernel(size, sigma) {
+            const kernel = new Array(size * size);
+            const halfSize = Math.floor(size / 2);
+            let sum = 0;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const dx = x - halfSize;
+                    const dy = y - halfSize;
+                    const value = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma));
+                    kernel[y * size + x] = value;
+                    sum += value;
+                }
+            }
+            
+            for (let i = 0; i < kernel.length; i++) {
+                kernel[i] /= sum;
+            }
+
+            return kernel;
+        }
+        
+    </script>
+</body>
+</html>
