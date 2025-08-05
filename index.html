@@ -91,28 +91,59 @@
         </div>
 
         <!-- Controls for Filters -->
-        <div class="grid button-grid gap-4 w-full max-w-5xl">
-            <button id="claheFilterBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
-                CLAHE
-            </button>
-            <button id="enhancedSharpeningBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
-                Enhanced Sharpen
-            </button>
-            <button id="medianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
-                Median Filter
-            </button>
-            <button id="adaptiveMedianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
-                Adaptive Median
-            </button>
-            <button id="unsharpMaskingBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
-                Unsharp Masking
-            </button>
+        <div class="w-full max-w-5xl">
+            <h3 class="text-lg font-semibold text-gray-200 mt-4 mb-2">Filters</h3>
+            <div class="grid button-grid gap-4">
+                <button id="claheFilterBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                    CLAHE
+                </button>
+                <button id="enhancedSharpeningBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
+                    Enhanced Sharpen
+                </button>
+                <button id="medianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                    Median Filter
+                </button>
+                <button id="adaptiveMedianFilterBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                    Adaptive Median
+                </button>
+                <button id="unsharpMaskingBtn" class="bg-sky-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-sky-700 transition duration-300">
+                    Unsharp Masking
+                </button>
+                <button id="histogramEqualizationBtn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-purple-700 transition duration-300">
+                    Histogram Equalization
+                </button>
+            </div>
+        </div>
+        
+        <!-- Sliders for Fine-Tuning -->
+        <div class="w-full max-w-5xl mt-8">
+            <h3 class="text-lg font-semibold text-gray-200 mb-2">Fine-Tuning</h3>
+            <div class="flex flex-col gap-4 bg-gray-800 p-4 rounded-lg shadow-inner">
+                <!-- Brightness Slider -->
+                <div class="flex flex-col">
+                    <label for="brightnessSlider" class="text-gray-300 mb-1">Brightness: <span id="brightnessValue">0</span></label>
+                    <input type="range" id="brightnessSlider" min="-100" max="100" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+                <!-- Contrast Slider -->
+                <div class="flex flex-col">
+                    <label for="contrastSlider" class="text-gray-300 mb-1">Contrast: <span id="contrastValue">0</span></label>
+                    <input type="range" id="contrastSlider" min="-100" max="100" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+                <!-- Gamma Correction Slider -->
+                <div class="flex flex-col">
+                    <label for="gammaSlider" class="text-gray-300 mb-1">Gamma: <span id="gammaValue">1.0</span></label>
+                    <input type="range" id="gammaSlider" min="0.1" max="5.0" value="1.0" step="0.1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+                <button id="resetAdjustmentsBtn" class="bg-gray-700 text-gray-200 font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-gray-600 transition duration-300">
+                    Reset Adjustments
+                </button>
+            </div>
         </div>
 
         <!-- Utility Buttons -->
         <div class="mt-8 flex flex-col md:flex-row gap-4 w-full justify-center">
             <button id="resetBtn" class="bg-gray-700 text-gray-200 font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-600 transition duration-300">
-                Reset
+                Reset to Original
             </button>
             <button id="saveOriginalBtn" class="bg-purple-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-purple-700 transition duration-300">
                 Save Original
@@ -146,40 +177,26 @@
         
         // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const firebaseConfigString = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
         
-        let userId = null;
-
-        // --- Firebase Auth and Firestore Setup ---
-        async function signIn() {
-            try {
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (error) {
-                console.error("Firebase Auth error:", error);
-            }
+        // Your web app's Firebase configuration
+        let firebaseConfig;
+        try {
+            firebaseConfig = JSON.parse(firebaseConfigString);
+        } catch (e) {
+            console.error("Failed to parse Firebase config:", e);
+            document.getElementById('statusMessage').textContent = 'Error: Firebase configuration invalid. Sharing features disabled.';
+            // Set firebaseConfig to an empty object to prevent app from crashing
+            firebaseConfig = {};
         }
-        
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-                document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
-                console.log("Signed in as user:", userId);
-                setupFirestoreListeners();
-            } else {
-                console.log("User is signed out.");
-                await signIn();
-            }
-        });
+
+        // Initialize Firebase variables
+        let app = null;
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let enhancedImageId = null;
 
         // --- DOM Elements and State ---
         const imageInput = document.getElementById('imageInput');
@@ -189,11 +206,12 @@
         const ctxEnhanced = enhancedCanvas.getContext('2d');
         const placeholderOriginal = document.getElementById('placeholder-original');
         const placeholderEnhanced = document.getElementById('placeholder-enhanced');
+        const claheFilterBtn = document.getElementById('claheFilterBtn');
+        const enhancedSharpeningBtn = document.getElementById('enhancedSharpeningBtn');
         const medianFilterBtn = document.getElementById('medianFilterBtn');
         const adaptiveMedianFilterBtn = document.getElementById('adaptiveMedianFilterBtn');
         const unsharpMaskingBtn = document.getElementById('unsharpMaskingBtn');
-        const claheFilterBtn = document.getElementById('claheFilterBtn');
-        const enhancedSharpeningBtn = document.getElementById('enhancedSharpeningBtn');
+        const histogramEqualizationBtn = document.getElementById('histogramEqualizationBtn');
         const resetBtn = document.getElementById('resetBtn');
         const saveOriginalBtn = document.getElementById('saveOriginalBtn');
         const saveEnhancedBtn = document.getElementById('saveEnhancedBtn');
@@ -201,20 +219,82 @@
         const statusMessage = document.getElementById('statusMessage');
         const sharedImagesContainer = document.getElementById('sharedImagesContainer');
 
+        // New sliders
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const contrastSlider = document.getElementById('contrastSlider');
+        const gammaSlider = document.getElementById('gammaSlider');
+        const brightnessValueDisplay = document.getElementById('brightnessValue');
+        const contrastValueDisplay = document.getElementById('contrastValue');
+        const gammaValueDisplay = document.getElementById('gammaValue');
+        const resetAdjustmentsBtn = document.getElementById('resetAdjustmentsBtn');
+
         let originalImage = null;
-        let enhancedImageId = null;
+        
+        // --- Firebase Init and Setup ---
+        try {
+            if (firebaseConfig && firebaseConfig.projectId) {
+                console.log("Firebase config found. Initializing Firebase...");
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
+                        console.log("Signed in as user:", userId);
+                        setupFirestoreListeners();
+                    } else {
+                        console.log("User is signed out. Attempting to sign in.");
+                        await signIn();
+                    }
+                });
+            } else {
+                console.error("Firebase is not configured. Public gallery and sharing features will not be available.");
+                document.getElementById('statusMessage').textContent = 'Error: Firebase configuration missing. Sharing features disabled.';
+                document.getElementById('shareEnhancedBtn').disabled = true;
+                document.getElementById('shareEnhancedBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        } catch (e) {
+            console.error("Failed to parse Firebase config:", e);
+            document.getElementById('statusMessage').textContent = 'Error: Firebase configuration invalid. Sharing features disabled.';
+            document.getElementById('shareEnhancedBtn').disabled = true;
+            document.getElementById('shareEnhancedBtn').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        async function signIn() {
+            try {
+                if (auth) {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                }
+            } catch (error) {
+                console.error("Firebase Auth error:", error);
+            }
+        }
 
         // --- Event Listeners ---
         imageInput.addEventListener('change', handleImageUpload);
+        claheFilterBtn.addEventListener('click', () => applyFilter(applyClaheFilter));
+        enhancedSharpeningBtn.addEventListener('click', () => applyFilter(applyEnhancedSharpening));
         medianFilterBtn.addEventListener('click', () => applyFilter(applyMedianFilter));
         adaptiveMedianFilterBtn.addEventListener('click', () => applyFilter(applyAdaptiveMedianFilter));
         unsharpMaskingBtn.addEventListener('click', () => applyFilter(applyUnsharpMasking));
-        claheFilterBtn.addEventListener('click', () => applyFilter(applyClaheFilter));
-        enhancedSharpeningBtn.addEventListener('click', () => applyFilter(applyEnhancedSharpening));
+        histogramEqualizationBtn.addEventListener('click', () => applyFilter(applyHistogramEqualization));
         resetBtn.addEventListener('click', resetImage);
         saveOriginalBtn.addEventListener('click', () => saveImage(originalCanvas, 'original_image'));
         saveEnhancedBtn.addEventListener('click', () => saveImage(enhancedCanvas, 'enhanced_image'));
         shareEnhancedBtn.addEventListener('click', shareEnhancedImage);
+
+        // Slider listeners
+        brightnessSlider.addEventListener('input', applySliderAdjustments);
+        contrastSlider.addEventListener('input', applySliderAdjustments);
+        gammaSlider.addEventListener('input', applySliderAdjustments);
+        resetAdjustmentsBtn.addEventListener('click', resetAdjustments);
+
 
         /**
          * Generic filter application wrapper.
@@ -223,24 +303,100 @@
         function applyFilter(filterFunction) {
             if (!originalImage) {
                 statusMessage.textContent = 'Please upload or select an image first.';
+                console.warn('Filter application failed: No image loaded.');
                 return;
             }
             statusMessage.textContent = `Applying ${filterFunction.name.replace('apply', '')}...`;
-            setTimeout(() => {
-                filterFunction();
-                statusMessage.textContent = `Filter applied: ${filterFunction.name.replace('apply', '')}!`;
-            }, 10);
+            console.log(`Applying filter: ${filterFunction.name}`);
+            
+            // Re-apply original image before applying new filter
+            ctxEnhanced.drawImage(originalImage, 0, 0);
+
+            // Apply filter and any slider adjustments
+            filterFunction();
+            applySliderAdjustments();
+            
+            statusMessage.textContent = `Filter applied: ${filterFunction.name.replace('apply', '')}!`;
+            console.log('Filter application complete.');
+        }
+
+        /**
+         * Resets all slider values to their defaults and applies the changes.
+         */
+        function resetAdjustments() {
+            if (!originalImage) return;
+            brightnessSlider.value = 0;
+            contrastSlider.value = 0;
+            gammaSlider.value = 1.0;
+            applySliderAdjustments();
+            statusMessage.textContent = 'Adjustments reset.';
+        }
+
+        /**
+         * Applies brightness, contrast, and gamma adjustments based on slider values.
+         * This function should be called after any filter to re-apply the adjustments.
+         */
+        function applySliderAdjustments() {
+            if (!originalImage) return;
+
+            const brightness = parseInt(brightnessSlider.value);
+            const contrast = parseInt(contrastSlider.value);
+            const gamma = parseFloat(gammaSlider.value);
+
+            brightnessValueDisplay.textContent = brightness;
+            contrastValueDisplay.textContent = contrast;
+            gammaValueDisplay.textContent = gamma.toFixed(1);
+
+            const srcData = ctxOriginal.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const width = enhancedCanvas.width;
+            const height = enhancedCanvas.height;
+
+            const contrastFactor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+            for (let i = 0; i < srcPixels.length; i += 4) {
+                let r = srcPixels[i];
+                let g = srcPixels[i + 1];
+                let b = srcPixels[i + 2];
+
+                // Brightness
+                r += brightness;
+                g += brightness;
+                b += brightness;
+
+                // Contrast
+                r = contrastFactor * (r - 128) + 128;
+                g = contrastFactor * (g - 128) + 128;
+                b = contrastFactor * (b - 128) + 128;
+                
+                // Gamma Correction
+                r = 255 * Math.pow(r / 255, 1 / gamma);
+                g = 255 * Math.pow(g / 255, 1 / gamma);
+                b = 255 * Math.pow(b / 255, 1 / gamma);
+
+                dstPixels[i] = Math.max(0, Math.min(255, r));
+                dstPixels[i + 1] = Math.max(0, Math.min(255, g));
+                dstPixels[i + 2] = Math.max(0, Math.min(255, b));
+                dstPixels[i + 3] = srcPixels[i + 3]; // Preserve alpha
+            }
+
+            ctxEnhanced.putImageData(dstData, 0, 0);
         }
 
         // --- Firestore Functions ---
         function setupFirestoreListeners() {
+            if (!db) return;
             const publicImagesRef = collection(db, `/artifacts/${appId}/public/data/public_images`);
             onSnapshot(publicImagesRef, (snapshot) => {
+                console.log('Fetching shared images from Firestore...');
                 sharedImagesContainer.innerHTML = '';
                 snapshot.forEach((doc) => {
                     const imageData = doc.data();
                     createSharedImageElement(doc.id, imageData.base64);
                 });
+                console.log('Shared images loaded successfully.');
             }, (error) => {
                 console.error("Error fetching shared images:", error);
             });
@@ -260,6 +416,7 @@
         function loadSharedImage(base64Data) {
             const img = new Image();
             img.onload = () => {
+                console.log('Shared image loaded into memory.');
                 originalImage = img;
                 // Draw the loaded image directly to both canvases
                 originalCanvas.width = originalImage.width;
@@ -270,9 +427,17 @@
                 ctxOriginal.drawImage(originalImage, 0, 0);
                 ctxEnhanced.drawImage(originalImage, 0, 0);
 
+                // Reset sliders to default values after loading a new image
+                resetAdjustments();
+
                 statusMessage.textContent = 'Shared image loaded!';
                 placeholderOriginal.style.display = 'none';
                 placeholderEnhanced.style.display = 'none';
+                console.log('Shared image drawn to canvases.');
+            };
+            img.onerror = () => {
+                console.error('Failed to load shared image.');
+                statusMessage.textContent = 'Failed to load shared image.';
             };
             img.src = base64Data;
         }
@@ -280,10 +445,17 @@
         async function shareEnhancedImage() {
             if (!originalImage) {
                 statusMessage.textContent = 'Please upload or select an image to share.';
+                console.warn('Share failed: No image to share.');
+                return;
+            }
+            if (!db || !userId) {
+                statusMessage.textContent = 'Sharing is disabled due to a Firebase configuration error.';
+                console.warn('Share failed: Firebase not initialized.');
                 return;
             }
 
             statusMessage.textContent = 'Sharing image...';
+            console.log('Attempting to share enhanced image...');
             const base64Data = enhancedCanvas.toDataURL('image/jpeg', 0.8);
             const imageDoc = {
                 base64: base64Data,
@@ -296,9 +468,11 @@
                 if (enhancedImageId) {
                      await updateDoc(doc(db, `/artifacts/${appId}/public/data/public_images`, enhancedImageId), imageDoc);
                     statusMessage.textContent = 'Shared image updated successfully!';
+                    console.log('Image updated in Firestore.');
                 } else {
                     await addDoc(publicImagesRef, imageDoc);
                     statusMessage.textContent = 'Enhanced image shared successfully!';
+                    console.log('New image added to Firestore.');
                 }
             } catch (e) {
                 console.error("Error sharing image:", e);
@@ -308,37 +482,76 @@
 
         // --- Image Handling and Drawing ---
         function handleImageUpload(event) {
+            console.log('1. File selection event triggered.');
             const file = event.target.files[0];
-            if (!file) return;
+            
+            if (!file) {
+                statusMessage.textContent = 'No file selected.';
+                console.warn('2. No file selected.');
+                return;
+            }
+
+            statusMessage.textContent = 'Reading file...';
+            console.log(`3. File selected: ${file.name}, Type: ${file.type}, Size: ${file.size} bytes.`);
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    originalImage = img;
-                    
-                    // Draw the uploaded image directly to both canvases
-                    originalCanvas.width = originalImage.width;
-                    originalCanvas.height = originalImage.height;
-                    enhancedCanvas.width = originalImage.width;
-                    enhancedCanvas.height = originalImage.height;
 
-                    ctxOriginal.drawImage(originalImage, 0, 0);
-                    ctxEnhanced.drawImage(originalImage, 0, 0);
-                    
-                    statusMessage.textContent = 'Image loaded successfully!';
-                    placeholderOriginal.style.display = 'none';
-                    placeholderEnhanced.style.display = 'none';
-                    enhancedImageId = null; 
+            reader.onload = (e) => {
+                console.log('4. FileReader onload triggered. File read successfully.');
+                statusMessage.textContent = 'Loading image into memory...';
+                
+                const img = new Image();
+                img.onload = () => {
+                    console.log('5. Image onload triggered. Image is fully loaded.');
+                    console.log(`6. Image dimensions: ${img.width}x${img.height}`);
+
+                    if (img.width > 0 && img.height > 0) {
+                        originalImage = img;
+                        displayImageOnCanvases();
+                        resetAdjustments();
+                        
+                        placeholderOriginal.style.display = 'none';
+                        placeholderEnhanced.style.display = 'none';
+                        statusMessage.textContent = 'Image loaded successfully!';
+                        console.log('7. Image successfully drawn to canvases.');
+                    } else {
+                        statusMessage.textContent = 'Error: Loaded image has invalid dimensions.';
+                        console.error('7. Image loaded but has invalid dimensions.');
+                    }
+                };
+                img.onerror = () => {
+                    statusMessage.textContent = 'Error: Image file could not be loaded.';
+                    console.error('5. Image failed to load. Check the file source or format.');
                 };
                 img.src = e.target.result;
             };
+
+            reader.onerror = (e) => {
+                statusMessage.textContent = 'Error: Failed to read the file.';
+                console.error('4. FileReader failed to read the file:', e.target.error);
+            };
+
             reader.readAsDataURL(file);
+        }
+
+        function displayImageOnCanvases() {
+            if (!originalImage) return;
+
+            originalCanvas.width = originalImage.width;
+            originalCanvas.height = originalImage.height;
+            enhancedCanvas.width = originalImage.width;
+            enhancedCanvas.height = originalImage.height;
+    
+            ctxOriginal.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+            ctxEnhanced.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
+            ctxOriginal.drawImage(originalImage, 0, 0);
+            ctxEnhanced.drawImage(originalImage, 0, 0);
         }
 
         function resetImage() {
             if (originalImage) {
                 ctxEnhanced.drawImage(originalImage, 0, 0);
+                resetAdjustments();
                 statusMessage.textContent = 'Enhanced image reset to original.';
             } else {
                 statusMessage.textContent = 'Please upload an image first.';
@@ -353,8 +566,8 @@
             statusMessage.textContent = `Image saved as ${link.download}.`;
         }
 
-        // --- Image Processing Filters (Updated) ---
-
+        // --- Image Processing Filters ---
+        
         /**
          * Applies the new CLAHE filter for local contrast enhancement.
          * @param {number} clipLimit - The clip limit for the histogram.
@@ -749,7 +962,59 @@
 
             return kernel;
         }
-        
+
+        /**
+         * Applies Histogram Equalization to the enhanced image.
+         */
+        function applyHistogramEqualization() {
+            const srcData = ctxEnhanced.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const dstData = ctxEnhanced.createImageData(enhancedCanvas.width, enhancedCanvas.height);
+            const srcPixels = srcData.data;
+            const dstPixels = dstData.data;
+            const numPixels = srcPixels.length / 4;
+
+            // Step 1: Compute histogram for each color channel
+            const histogram = [[], [], []];
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 256; j++) {
+                    histogram[i][j] = 0;
+                }
+            }
+            for (let i = 0; i < srcPixels.length; i += 4) {
+                histogram[0][srcPixels[i]]++;
+                histogram[1][srcPixels[i+1]]++;
+                histogram[2][srcPixels[i+2]]++;
+            }
+
+            // Step 2: Compute CDF (Cumulative Distribution Function)
+            const cdf = [[], [], []];
+            for (let i = 0; i < 3; i++) {
+                let sum = 0;
+                for (let j = 0; j < 256; j++) {
+                    sum += histogram[i][j];
+                    cdf[i][j] = sum;
+                }
+            }
+
+            // Step 3: Normalize CDF to map to new pixel values
+            const newValues = [[], [], []];
+            for (let i = 0; i < 3; i++) {
+                const minCdf = cdf[i][0];
+                for (let j = 0; j < 256; j++) {
+                    newValues[i][j] = Math.round((cdf[i][j] - minCdf) / (numPixels - minCdf) * 255);
+                }
+            }
+
+            // Step 4: Apply new pixel values
+            for (let i = 0; i < srcPixels.length; i += 4) {
+                dstPixels[i] = newValues[0][srcPixels[i]];
+                dstPixels[i+1] = newValues[1][srcPixels[i+1]];
+                dstPixels[i+2] = newValues[2][srcPixels[i+2]];
+                dstPixels[i+3] = srcPixels[i+3];
+            }
+            
+            ctxEnhanced.putImageData(dstData, 0, 0);
+        }
     </script>
 </body>
 </html>
