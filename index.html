@@ -45,6 +45,15 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
         }
+        /* Mobile-first adjustments for button layout */
+        .button-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        @media (min-width: 768px) {
+            .button-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
     </style>
 </head>
 <body class="bg-[#1a1a2e] text-gray-100 flex items-center justify-center min-h-screen p-4">
@@ -82,7 +91,7 @@
         </div>
 
         <!-- Controls for Filters -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full max-w-5xl">
+        <div class="grid button-grid gap-4 w-full max-w-5xl">
             <button id="claheFilterBtn" class="bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300">
                 CLAHE
             </button>
@@ -252,7 +261,15 @@
             const img = new Image();
             img.onload = () => {
                 originalImage = img;
-                drawImages();
+                // Draw the loaded image directly to both canvases
+                originalCanvas.width = originalImage.width;
+                originalCanvas.height = originalImage.height;
+                enhancedCanvas.width = originalImage.width;
+                enhancedCanvas.height = originalImage.height;
+
+                ctxOriginal.drawImage(originalImage, 0, 0);
+                ctxEnhanced.drawImage(originalImage, 0, 0);
+
                 statusMessage.textContent = 'Shared image loaded!';
                 placeholderOriginal.style.display = 'none';
                 placeholderEnhanced.style.display = 'none';
@@ -299,7 +316,16 @@
                 const img = new Image();
                 img.onload = function() {
                     originalImage = img;
-                    drawImages();
+                    
+                    // Draw the uploaded image directly to both canvases
+                    originalCanvas.width = originalImage.width;
+                    originalCanvas.height = originalImage.height;
+                    enhancedCanvas.width = originalImage.width;
+                    enhancedCanvas.height = originalImage.height;
+
+                    ctxOriginal.drawImage(originalImage, 0, 0);
+                    ctxEnhanced.drawImage(originalImage, 0, 0);
+                    
                     statusMessage.textContent = 'Image loaded successfully!';
                     placeholderOriginal.style.display = 'none';
                     placeholderEnhanced.style.display = 'none';
@@ -308,18 +334,6 @@
                 img.src = e.target.result;
             };
             reader.readAsDataURL(file);
-        }
-
-        function drawImages() {
-            if (!originalImage) return;
-
-            originalCanvas.width = originalImage.width;
-            originalCanvas.height = originalImage.height;
-            enhancedCanvas.width = originalImage.width;
-            enhancedCanvas.height = originalImage.height;
-
-            ctxOriginal.drawImage(originalImage, 0, 0);
-            ctxEnhanced.drawImage(originalImage, 0, 0);
         }
 
         function resetImage() {
